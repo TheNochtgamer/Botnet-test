@@ -14,10 +14,13 @@
   "license": "ISC",
   "dependencies": {
     "dotenv": "^16.4.5",
-    "mineflayer": "^4.23.0"
+    "mineflayer": "^4.23.0",
+    "vec3": "^0.1.10",
+    "yargs": "^17.7.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.16.0",
+    "@types/yargs": "^17.0.33",
     "eslint": "^9.16.0",
     "globals": "^15.13.0",
     "ts-node": "^10.9.2",

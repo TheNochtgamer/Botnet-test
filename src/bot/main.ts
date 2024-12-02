@@ -1,32 +1,38 @@
-import type { BotMessageChat, BotMessageLog } from '../types';
+import type { BotIPCMsgChat } from '../types';
 import { MyBot } from './MyBot';
 
-if (process.argv[2] === undefined || process.argv[3] === undefined) {
-  console.error('Missing arguments, like id or username');
+if (
+  process.argv[2] === undefined ||
+  process.argv[3] === undefined ||
+  process.argv[4] === undefined
+) {
+  console.error('Missing arguments, like id or index or username');
   process.exit(1);
 }
 
 export const myID = parseInt(process.argv[2]);
+export const myIndex = parseInt(process.argv[3]);
+const username = process.argv[4];
 
 (function ReBuildLogs() {
   const oldLog = console.log;
   console.log = (...args: unknown[]) => {
-    oldLog(`<C><LOG:#${myID}> `, ...args);
+    oldLog(`<C><LOG:@${myIndex}> `, ...args);
   };
   const oldWarn = console.warn;
   console.warn = (...args: unknown[]) => {
-    oldWarn(`<C><WARN:#${myID}> `, ...args);
+    oldWarn(`<C><WARN:@${myIndex}> `, ...args);
   };
   const oldError = console.error;
   console.error = (...args: unknown[]) => {
-    oldError(`<C><ERROR:#${myID}> `, ...args);
+    oldError(`<C><ERROR:@${myIndex}> `, ...args);
   };
 })();
 
 const bot = new MyBot({
   host: process.env.MCHOST,
   port: 25565,
-  username: process.argv[3],
+  username,
   auth: 'offline',
   viewDistance: 'tiny'
 });
@@ -38,7 +44,7 @@ export const sendChat = (message: string, username: string, raw: unknown) => {
     username,
     message,
     raw
-  } satisfies BotMessageChat);
+  } satisfies BotIPCMsgChat);
 };
 
 // export const sendLog = (args: unknown[]) => {

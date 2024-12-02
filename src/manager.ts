@@ -1,5 +1,5 @@
 import childProcess from 'node:child_process';
-import { BotExec, BotMessage } from './types';
+import { BotExec, BotIPCMsg } from './types';
 import { realID } from './utils/realID';
 import { join } from 'path';
 
@@ -8,12 +8,15 @@ class BotManager {
   public chatIdentifiers: string[] = [];
 
   createBot(index = 0) {
+    if (this.bots.some(bot => bot.botIndex === index))
+      throw new Error('Bot already exists');
+
     const id = realID();
     const username = 'NochtTests' + (index > 0 ? '_' + (index + 1) : '');
 
     const child = childProcess.fork(
       join(__dirname, './bot/main.js'),
-      [id + '', username],
+      [id + '', index + '', username],
       {
         cwd: '../'
       }
@@ -22,55 +25,51 @@ class BotManager {
     const bot = {
       id,
       child,
-      username
-    };
+      username,
+      botIndex: index
+    } satisfies BotExec;
 
     this.bots.push(bot);
 
-    bot.child.on('error', err => {
-      console.error(`<ERROR-#${bot.id}>`, err);
+    bot.child.on('close', code => this.closeOrError(bot, code));
+    bot.child.on('error', err => this.closeOrError(bot, err));
+    bot.child.on('message', (msg: BotIPCMsg) => this.onMessage(bot, msg));
+  }
 
-      this.bots.splice(
-        this.bots.findIndex(botExec => (botExec.id = id)),
-        1
-      );
+  private closeOrError(bot: BotExec, data: Error | number | null) {
+    if (data instanceof Error) {
+      console.error(`<ERROR-@${bot.botIndex}> Process closed by error: `, data);
+    } else {
+      console.log(`<LOG-@${bot.botIndex}> Process closed with code: `, data);
+    }
 
-      this.createBot(index);
-    });
+    this.bots.splice(
+      this.bots.findIndex(botExec => (botExec.id = bot.id)),
+      1
+    );
 
-    bot.child.on('close', code => {
-      console.log(`<LOG-#${bot.id}> Closed with code ${code}`);
-      this.bots.splice(
-        this.bots.findIndex(botExec => (botExec.id = id)),
-        1
-      );
+    this.createBot(bot.botIndex);
+  }
 
-      this.createBot(index);
-    });
+  private onMessage(bot: BotExec, msg: BotIPCMsg) {
+    if (msg.type === 'chat') {
+      const myIdentifier = msg.username + msg.message.split(' ')[0];
 
-    bot.child.on('message', (msg: BotMessage) => {
-      if (msg.type === 'chat') {
-        const myIdentifier = msg.username + msg.message.split(' ')[0];
-
-        if (
-          this.chatIdentifiers.some(identifier => identifier === myIdentifier)
-        )
-          return;
-        this.chatIdentifiers.push(myIdentifier);
-        setTimeout(() => {
-          // Puede llegar a tener un problema a futuro
-          this.chatIdentifiers = this.chatIdentifiers.filter(
-            identifier => identifier !== myIdentifier
-          );
-        }, 4000);
-
-        console.log(`<LOG-#${bot.id}> [${msg.username}] ${msg.message}`);
-        console.log('Raw:', msg.raw);
-
+      if (this.chatIdentifiers.some(identifier => identifier === myIdentifier))
         return;
-      }
-      console.warn(msg);
-    });
+      this.chatIdentifiers.push(myIdentifier);
+      setTimeout(() => {
+        // Puede llegar a tener un problema a futuro
+        this.chatIdentifiers = this.chatIdentifiers.filter(
+          identifier => identifier !== myIdentifier
+        );
+      }, 4000);
+
+      console.log(`<LOG-@${bot.botIndex}> [${msg.username}] ${msg.message}`);
+
+      return;
+    }
+    console.warn(msg);
   }
 }
 
