@@ -1,5 +1,5 @@
 import mineflayer from 'mineflayer';
-import { sendChat } from './main';
+import { myIndex, sendChat } from './main';
 import fs from 'fs';
 import { join } from 'path';
 import { BotCommand } from './bottypes';
@@ -57,12 +57,12 @@ export class MyBot {
     this.bot.on('chat', (username, message, _, raw) => {
       if (username === this.bot?.username) return;
       sendChat(message, username, raw);
-      this.cmdHandler(username, message, 0);
+      this.cmdHandler(username, message, 'chat');
     });
 
     this.bot.on('whisper', (username, message) => {
       console.log(`"${username}" whispered me: ${message}`);
-      this.cmdHandler(username, message, 1);
+      this.cmdHandler(username, message, 'whisper');
     });
   }
 
@@ -95,21 +95,53 @@ export class MyBot {
     }
   }
 
-  private cmdHandler(
+  public async cmdHandler(
     sender: string,
     message: string,
-    type: 0 | 1,
-    itComesFromUp = false
+    senderType: 'chat' | 'whisper' | 'internal'
   ) {
     if (!this.bot) return;
 
     /*
 @1
 NochtTests_1
-/msg NochtTests_1
+@NochtTests_1
+/msg NochtTests_1 @
 
 @all
 @a
     */
+
+    // Check if this is a command
+    if (!message.startsWith('@') || !message.startsWith(this.bot.username))
+      return;
+
+    // Authorizations
+    if (!(process.env.OWNERS_USERS || '').split(',').includes(sender)) return;
+
+    // Extra cases
+    if (senderType === 'whisper') {
+      if (message.match(/^@(all|a)/i)) {
+        // Send message to the parent manager
+      } else if (
+        message.match(/^(|@)[0-9]+/i) &&
+        !message.match(new RegExp('^(|@)' + myIndex, 'i'))
+      ) {
+        // Send message to the parent manager
+      }
+    }
+
+    if (
+      !message.match(new RegExp('^(|@)' + this.bot.username, 'i')) ||
+      !message.match(new RegExp('^(|@)' + myIndex, 'i')) ||
+      !message.match(/^@(all|a)/i) ||
+      !(message.startsWith('@') && senderType === 'whisper')
+    )
+      return;
+
+    // Parseo y ejecucion
+    const args = parseSync(message);
+
+    // Falta obtener el comando y ejecutarlo
   }
 }

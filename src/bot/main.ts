@@ -47,6 +47,8 @@ export const sendChat = (message: string, username: string, raw: unknown) => {
   } satisfies BotIPCMsgChat);
 };
 
+process.on('message', (msg: unknown) => {});
+
 // export const sendLog = (args: unknown[]) => {
 //   const parseMessage = {
 //     type: 'log',
