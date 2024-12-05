@@ -6,8 +6,8 @@
 
 ## Caracteristicas
 
--[ ] Generacion de multiples bots
--[ ] State-machine
--[ ] Sistema de respuesta a comandos
--[ ] Comunicacion mutua
--[ ] Guardado de informacion
+- [ ] Generacion de multiples bots
+- [ ] State-machine
+- [ ] Sistema de respuesta a comandos
+- [ ] Comunicacion mutua
+- [ ] Guardado de informacion
