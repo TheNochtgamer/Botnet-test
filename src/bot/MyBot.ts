@@ -142,6 +142,21 @@ NochtTests_1
     // Parseo y ejecucion
     const args = parseSync(message);
 
-    // Falta obtener el comando y ejecutarlo
+    const command = this.commands.find(
+      cmd =>
+        cmd.name === String(args._[0]) ||
+        cmd.aliases?.includes(String(args._[0]))
+    );
+
+    if (!command) {
+      this.bot.whisper(sender, 'Invalid command');
+      return;
+    }
+
+    try {
+      await command.run(this, sender, args, message);
+    } catch (error) {
+      console.error('Error executing command:', error);
+    }
   }
 }

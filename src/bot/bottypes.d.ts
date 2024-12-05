@@ -1,7 +1,13 @@
-import type { Bot } from '../types';
+import type { MyBot } from './MyBot';
+import { parseSync } from 'yargs';
 
 export interface BotCommand {
   name: string;
-  match: RegExp;
-  run: (bot: Bot, sender: string, message: string) => void;
+  aliases?: string[];
+  run: (
+    myBot: MyBot,
+    sender: string,
+    args: ReturnType<typeof parseSync>,
+    raw: string
+  ) => void;
 }
