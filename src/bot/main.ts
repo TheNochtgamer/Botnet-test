@@ -1,4 +1,3 @@
-import type { BotIPCMsgChat } from '../types';
 import { MyBot } from './MyBot';
 
 if (
@@ -31,21 +30,13 @@ const username = process.argv[4];
 
 const bot = new MyBot({
   host: process.env.MCHOST,
-  port: 25565,
+  port: parseInt(process.env.MCPORT + '') || 25565,
   username,
   auth: 'offline',
-  viewDistance: 'tiny'
+  viewDistance: 'tiny',
+  respawn: false
 });
 bot.init();
-
-export const sendChat = (message: string, username: string, raw: unknown) => {
-  process.send!({
-    type: 'chat',
-    username,
-    message,
-    raw
-  } satisfies BotIPCMsgChat);
-};
 
 // export const sendLog = (args: unknown[]) => {
 //   const parseMessage = {

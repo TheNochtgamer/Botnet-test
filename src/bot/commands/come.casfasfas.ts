@@ -1,4 +1,4 @@
-import { BotCommand } from '../bottypes';
+import { BotCommand } from '../botTypes';
 
 export default {
   name: 'come',

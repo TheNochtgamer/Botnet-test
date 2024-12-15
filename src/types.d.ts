@@ -25,9 +25,15 @@ export interface BotIPCMsgMetaEntity {
   pos: Vec3;
 }
 
+export interface BotIPCMsgMetaBotnetUser {
+  type: 'botnetUser';
+  action: 'add' | 'remove';
+  name: string;
+}
+
 export interface BotIPCMsgMeta {
   type: 'meta';
-  data: BotIPCMsgMetaEntity;
+  data: BotIPCMsgMetaEntity | BotIPCMsgMetaBotnetUser;
 }
 
 export interface BotIPCMsgChat {

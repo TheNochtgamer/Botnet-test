@@ -1,5 +1,5 @@
 import childProcess from 'node:child_process';
-import { BotExec, BotIPCMsg } from './types';
+import { BotExec, BotIPCMsg, BotIPCMsgMeta } from '../types';
 import { realID } from './utils/realID';
 import { join } from 'path';
 
@@ -8,14 +8,11 @@ class BotManager {
   public chatIdentifiers: string[] = [];
 
   createBot(index = 0) {
-    if (this.bots.some(bot => bot.botIndex === index))
-      throw new Error('Bot already exists');
-
     const id = realID();
     const username = 'NochtTests' + (index > 0 ? '_' + (index + 1) : '');
 
     const child = childProcess.fork(
-      join(__dirname, './bot/main.js'),
+      join(__dirname, '../bot/main.js'),
       [id + '', index + '', username],
       {
         cwd: '../'
@@ -29,7 +26,17 @@ class BotManager {
       botIndex: index
     } satisfies BotExec;
 
+    this.bots.forEach(xBot => {
+      bot.child.send({
+        type: 'meta',
+        data: { type: 'botnetUser', action: 'add', name: xBot.username }
+      });
+    });
     this.bots.push(bot);
+    this.sendToAll({
+      type: 'meta',
+      data: { type: 'botnetUser', action: 'add', name: username }
+    });
 
     bot.child.on('close', code => this.closeOrError(bot, code));
     bot.child.on('error', err => this.closeOrError(bot, err));
@@ -70,6 +77,10 @@ class BotManager {
       return;
     }
     console.warn(msg);
+  }
+
+  public sendToAll(msg: BotIPCMsgMeta) {
+    this.bots.forEach(bot => bot.child.send(msg));
   }
 }
 

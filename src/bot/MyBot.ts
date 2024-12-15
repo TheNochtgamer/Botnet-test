@@ -1,30 +1,34 @@
 import mineflayer from 'mineflayer';
-import { myIndex, sendChat } from './main';
+import { myIndex } from './main';
 import fs from 'fs';
 import { join } from 'path';
-import { BotCommand } from './bottypes';
+import { BotCommand } from './botTypes';
 import { parseSync } from 'yargs';
+import { pathfinder } from 'mineflayer-pathfinder';
+import { setTimeout as delay } from 'node:timers/promises';
+import TransitionService from './services/transition.service';
+import CommsService from './services/comms.service';
 
 export class MyBot {
   bot: mineflayer.Bot | null = null;
+  transitionService: TransitionService | null = null;
+  commsService: CommsService;
   readonly myOptions: mineflayer.BotOptions;
   private commands: BotCommand[] = [];
+  public botNetUsernames: Set<string> = new Set();
 
-  constructor(
-    options: mineflayer.BotOptions = {
-      host: process.env.MCHOST,
-      port: 25565,
-      username: process.argv[3] || 'NochtTests',
-      auth: 'offline',
-      viewDistance: 'tiny'
-    }
-  ) {
+  constructor(options: mineflayer.BotOptions) {
     this.myOptions = options;
+    this.commsService = new CommsService(this);
   }
 
   public init() {
     if (this.bot) return;
     this.bot = mineflayer.createBot(this.myOptions);
+
+    this.bot.loadPlugin(pathfinder);
+    this.transitionService = new TransitionService(this, this.bot);
+
     this.initEvents();
     this.initCommands();
   }
@@ -39,24 +43,41 @@ export class MyBot {
       console.log(`"${this.myOptions.username}" Bot spawned`);
     });
 
+    this.bot.once('spawn', () => {
+      this.transitionService?.init();
+    });
+
     this.bot.on('error', err => {
       if (err.name == 'ECONNREFUSED') {
         console.error(
           `Failed to connect to ${this.myOptions.host}:${this.myOptions.port}`
         );
         return;
+      } else if (err.message.includes('client timed out')) {
+        console.error('Connection timed out for some reason');
+        process.exit(1);
       }
 
+      console.log('ErrorNameDebug:', err.name);
       console.error(err);
+    });
+
+    this.bot.on('death', async () => {
+      console.log(`Bot ${this.bot?.username} died`);
+      this.transitionService?.onDeath();
+
+      await delay(1000);
+      this.bot?.respawn();
     });
 
     this.bot.on('kicked', reason => {
       console.warn('Kicked:', reason);
+      process.exit(0);
     });
 
     this.bot.on('chat', (username, message, _, raw) => {
       if (username === this.bot?.username) return;
-      sendChat(message, username, raw);
+      this.commsService.sendChat(message, username, raw);
       this.cmdHandler(username, message, 'chat');
     });
 
@@ -81,11 +102,7 @@ export class MyBot {
         const cmd = await import(join(__dirname, 'commands', file.name));
         if (!cmd.default) new Error('Commands needs a structure');
 
-        if (
-          !cmd.default.name ||
-          !cmd.default.match ||
-          typeof cmd.default.run !== 'function'
-        )
+        if (!cmd.default.name || typeof cmd.default.run !== 'function')
           throw new Error('Invalid command structure');
 
         this.commands.push(cmd.default);
