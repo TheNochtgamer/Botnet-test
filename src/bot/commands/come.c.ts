@@ -4,6 +4,6 @@ export default {
   name: 'come',
   aliases: ['aca', 'veni', 'aqui', 'here', 'x'],
   run: async (myBot, sender, args, raw) => {
-    myBot.bot?.version;
+    // myBot.bot?.version;
   }
 } satisfies BotCommand;
